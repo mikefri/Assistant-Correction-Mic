@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Assistant Correction Mic — SNCF</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #f5f4f0; --surface: #ffffff; --surface2: #f0ede8; --border: #dedad4;
+    --text: #1a1916; --text2: #6b6860; --accent: #c41e3a; --accent-light: #fdf0f2;
+    --green: #1a7a4a; --green-light: #edf7f1; --radius: 12px;
+    --mono: 'DM Mono', monospace; --sans: 'DM Sans', sans-serif;
+  }
+  body { font-family: var(--sans); background: var(--bg); min-height: 100vh; display: flex; flex-direction: column; align-items: center; padding: 24px 16px; color: var(--text); }
+  header { width: 100%; max-width: 720px; display: flex; align-items: center; gap: 14px; margin-bottom: 20px; }
+  .logo { width: 42px; height: 42px; background: var(--accent); border-radius: 10px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .logo svg { width: 22px; height: 22px; fill: white; }
+  .header-text h1 { font-size: 17px; font-weight: 500; letter-spacing: -0.3px; }
+  .header-text p { font-size: 12px; color: var(--text2); font-family: var(--mono); margin-top: 2px; }
+  #setup { width: 100%; max-width: 720px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px 20px; margin-bottom: 16px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+  #setup label { font-size: 12px; font-family: var(--mono); color: var(--text2); white-space: nowrap; }
+  #api-key-input { flex: 1; min-width: 180px; border: 1px solid var(--border); border-radius: 8px; padding: 8px 12px; font-size: 13px; font-family: var(--mono); background: var(--bg); color: var(--text); outline: none; transition: border-color 0.15s; }
+  #api-key-input:focus { border-color: var(--accent); }
+  #save-key-btn { padding: 8px 16px; background: var(--accent); color: white; border: none; border-radius: 8px; font-size: 13px; font-family: var(--sans); font-weight: 500; cursor: pointer; white-space: nowrap; transition: opacity 0.15s; }
+  #save-key-btn:hover { opacity: 0.85; }
+  .key-status { font-size: 12px; font-family: var(--mono); padding: 4px 10px; border-radius: 6px; white-space: nowrap; }
+  .key-status.ok { background: var(--green-light); color: var(--green); }
+  .key-status.missing { background: var(--accent-light); color: var(--accent); }
+  .setup-help { width: 100%; font-size: 12px; font-family: var(--mono); color: var(--text2); margin-top: 4px; }
+  .setup-help a { color: var(--accent); }
+  #chat-window { width: 100%; max-width: 720px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 2px 12px rgba(0,0,0,0.05); }
+  #messages { flex: 1; min-height: 400px; max-height: 520px; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 16px; scroll-behavior: smooth; }
+  .msg-user { align-self: flex-end; background: var(--surface2); border: 1px solid var(--border); border-radius: 14px 14px 3px 14px; padding: 10px 14px; max-width: 82%; font-size: 14px; line-height: 1.6; white-space: pre-wrap; word-break: break-word; }
+  .msg-bot-wrap { align-self: flex-start; max-width: 92%; display: flex; flex-direction: column; gap: 8px; }
+  .msg-bot { background: var(--bg); border: 1px solid var(--border); border-radius: 3px 14px 14px 14px; padding: 14px 16px; font-size: 14px; line-height: 1.7; white-space: pre-wrap; word-break: break-word; }
+  .msg-bot.loading { color: var(--text2); font-family: var(--mono); font-size: 13px; }
+  .msg-bot.error { background: var(--accent-light); border-color: #f5c0c8; color: var(--accent); font-size: 13px; }
+  .copy-bar { display: flex; gap: 8px; flex-wrap: wrap; }
+  .copy-btn { display: inline-flex; align-items: center; gap: 6px; padding: 5px 12px; font-size: 12px; font-family: var(--mono); border: 1px solid var(--border); border-radius: 6px; background: var(--surface); color: var(--text2); cursor: pointer; transition: all 0.15s; user-select: none; }
+  .copy-btn:hover { background: var(--surface2); color: var(--text); border-color: #c0bbb5; }
+  .copy-btn.copied { background: var(--green-light); color: var(--green); border-color: #a8dfc0; }
+  .copy-btn svg { width: 13px; height: 13px; flex-shrink: 0; }
+  #input-area { border-top: 1px solid var(--border); padding: 14px 16px; display: flex; gap: 10px; align-items: flex-end; background: var(--surface); }
+  #user-input { flex: 1; resize: none; border: 1px solid var(--border); border-radius: 10px; padding: 10px 14px; font-size: 14px; font-family: var(--sans); line-height: 1.5; min-height: 44px; max-height: 140px; background: var(--bg); color: var(--text); outline: none; transition: border-color 0.15s; }
+  #user-input:focus { border-color: #b0aba5; }
+  #user-input::placeholder { color: var(--text2); }
+  #send-btn { width: 44px; height: 44px; border-radius: 50%; border: none; background: var(--accent); color: white; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; transition: opacity 0.15s, transform 0.1s; }
+  #send-btn:hover { opacity: 0.88; }
+  #send-btn:active { transform: scale(0.95); }
+  #send-btn:disabled { opacity: 0.3; cursor: default; transform: none; }
+  #send-btn svg { width: 18px; height: 18px; fill: white; }
+  .hints { width: 100%; max-width: 720px; display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+  .hint-pill { font-size: 12px; font-family: var(--mono); padding: 5px 12px; border: 1px solid var(--border); border-radius: 20px; background: var(--surface); color: var(--text2); cursor: pointer; transition: all 0.15s; }
+  .hint-pill:hover { background: var(--surface2); color: var(--text); border-color: #c0bbb5; }
+  footer { margin-top: 20px; font-size: 11px; font-family: var(--mono); color: var(--text2); text-align: center; line-height: 1.8; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <svg viewBox="0 0 24 24"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"/></svg>
+  </div>
+  <div class="header-text">
+    <h1>Assistant Correction Mic</h1>
+    <p>SNCF · Teams &amp; Mail · correction professionnelle</p>
+  </div>
+</header>
+
+<div id="setup">
+  <label>CLÉ GEMINI</label>
+  <input type="password" id="api-key-input" placeholder="AIza..." autocomplete="off" />
+  <button id="save-key-btn">Enregistrer</button>
+  <span id="key-status" class="key-status missing">non configurée</span>
+  <div class="setup-help">
+    Clé 100% gratuite sur <a href="https://aistudio.google.com/apikey" target="_blank">aistudio.google.com/apikey</a> — aucune carte bancaire requise.
+  </div>
+</div>
+
+<div id="chat-window">
+  <div id="messages">
+    <div class="msg-bot-wrap">
+      <div class="msg-bot">Bonjour ! Collez votre texte et je propose une version Teams et une version mail. Précisez « version Teams » ou « version mail » si vous n'en voulez qu'une.</div>
+    </div>
+  </div>
+  <div id="input-area">
+    <textarea id="user-input" placeholder="Collez votre texte ici…" rows="1"></textarea>
+    <button id="send-btn" disabled>
+      <svg viewBox="0 0 24 24"><path d="M2 21l21-9L2 3v7l15 2-15 2z"/></svg>
+    </button>
+  </div>
+</div>
+
+<div class="hints">
+  <span class="hint-pill" onclick="insertHint('version Teams')">version Teams</span>
+  <span class="hint-pill" onclick="insertHint('version mail')">version mail</span>
+  <span class="hint-pill" onclick="insertHint('version courte')">version courte</span>
+  <span class="hint-pill" onclick="insertHint('version formelle')">version formelle</span>
+</div>
+
+<footer>
+  Clé API stockée uniquement dans votre navigateur — jamais transmise à un tiers.<br>
+  Propulsé par Google Gemini · Gratuit sans carte bancaire
+</footer>
+
+<script>
+const SYSTEM = `Tu es un assistant spécialisé dans la correction et la reformulation de textes pour un usage professionnel à la SNCF.
+Ta mission :
+- Corriger l'orthographe, la grammaire et la ponctuation.
+- Reformuler les messages de manière claire, concise et professionnelle.
+- Adapter le ton selon le contexte :
+  - Version Teams : ton court, direct, sans formule de politesse
+  - Version mail : ton formel, avec formule d'ouverture et de clôture
+- Ne jamais modifier les informations techniques (numéros de train, automotrice, BF, panne, éléments, procédures, codes métier...).
+- Ne jamais inventer de détails absents du texte d'origine.
+- Ne jamais ajouter de commentaires ou d'explications : donner uniquement le texte corrigé.
+- Toujours proposer la version corrigée en priorité.
+Termes techniques à ne jamais modifier ni reformuler :
+Z2, BB, TER, TGV, ICE, BF, UIC, RFN, ASCT, ADC, TCO, PTCAR, et tout code ou sigle métier SNCF.
+Format de réponse :
+Si une seule version est demandée :
+✅ Version [Teams / mail / courte / formelle] :
+[texte corrigé]
+Si aucune version n'est précisée, propose les deux :
+✅ Version Teams :
+[texte court et direct]
+📧 Version mail :
+[texte formel avec formule d'ouverture et de clôture]
+Comportement automatique :
+- Si l'utilisateur écrit "version courte", "version mail", "version Teams" ou "version plus formelle" → adapte uniquement le registre.
+- Si l'utilisateur colle un texte sans consigne → propose les deux formats.
+- Si le texte est déjà correct → indique-le brièvement et propose quand même une version légèrement améliorée si possible.
+- Si le message contient le mot "urgent" ou "immédiat" → conserve ce caractère d'urgence dans la reformulation.`;
+
+const messagesEl = document.getElementById('messages');
+const inputEl = document.getElementById('user-input');
+const sendBtn = document.getElementById('send-btn');
+const apiKeyInput = document.getElementById('api-key-input');
+const keyStatus = document.getElementById('key-status');
+let history = [];
+let busy = false;
+let apiKey = '';
+
+const saved = localStorage.getItem('sncf_gemini_key');
+if (saved) { apiKey = saved; apiKeyInput.value = saved; setKeyOk(); }
+
+document.getElementById('save-key-btn').addEventListener('click', () => {
+  const k = apiKeyInput.value.trim();
+  if (!k) { keyStatus.textContent = 'clé vide'; keyStatus.className = 'key-status missing'; return; }
+  apiKey = k;
+  localStorage.setItem('sncf_gemini_key', k);
+  setKeyOk();
+});
+
+function setKeyOk() {
+  keyStatus.textContent = 'configurée ✓';
+  keyStatus.className = 'key-status ok';
+  sendBtn.disabled = false;
+}
+
+inputEl.addEventListener('input', () => {
+  inputEl.style.height = 'auto';
+  inputEl.style.height = Math.min(inputEl.scrollHeight, 140) + 'px';
+});
+
+inputEl.addEventListener('keydown', e => {
+  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); }
+});
+
+sendBtn.addEventListener('click', send);
+
+function insertHint(text) {
+  inputEl.value = inputEl.value ? inputEl.value + ' — ' + text : text;
+  inputEl.focus();
+}
+
+function copyIcon() {
+  return `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M16 1H4C2.9 1 2 1.9 2 3v14h2V3h12V1zm3 4H8C6.9 5 6 5.9 6 7v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/></svg>`;
+}
+
+function checkIcon() {
+  return `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg>`;
+}
+
+function addCopyBar(text) {
+  const bar = document.createElement('div');
+  bar.className = 'copy-bar';
+  const btn = document.createElement('button');
+  btn.className = 'copy-btn';
+  btn.innerHTML = copyIcon() + ' Copier le texte';
+  btn.onclick = () => {
+    navigator.clipboard.writeText(text).then(() => {
+      btn.innerHTML = checkIcon() + ' Copié !';
+      btn.classList.add('copied');
+      setTimeout(() => { btn.innerHTML = copyIcon() + ' Copier le texte'; btn.classList.remove('copied'); }, 2500);
+    });
+  };
+  bar.appendChild(btn);
+  return bar;
+}
+
+async function send() {
+  const text = inputEl.value.trim();
+  if (!text || busy || !apiKey) return;
+  busy = true;
+  sendBtn.disabled = true;
+
+  const userDiv = document.createElement('div');
+  userDiv.className = 'msg-user';
+  userDiv.textContent = text;
+  messagesEl.appendChild(userDiv);
+  inputEl.value = '';
+  inputEl.style.height = 'auto';
+  history.push({ role: 'user', parts: [{ text }] });
+
+  const wrap = document.createElement('div');
+  wrap.className = 'msg-bot-wrap';
+  const botDiv = document.createElement('div');
+  botDiv.className = 'msg-bot loading';
+  botDiv.textContent = 'Correction en cours…';
+  wrap.appendChild(botDiv);
+  messagesEl.appendChild(wrap);
+  messagesEl.scrollTop = messagesEl.scrollHeight;
+
+  try {
+    const res = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          system_instruction: { parts: [{ text: SYSTEM }] },
+          contents: history
+        })
+      }
+    );
+    const data = await res.json();
+    if (data.error) throw new Error(data.error.message);
+    const reply = data.candidates[0].content.parts.map(p => p.text || '').join('');
+    botDiv.className = 'msg-bot';
+    botDiv.textContent = reply;
+    history.push({ role: 'model', parts: [{ text: reply }] });
+    wrap.appendChild(addCopyBar(reply));
+  } catch(e) {
+    botDiv.className = 'msg-bot error';
+    botDiv.textContent = 'Erreur : ' + (e.message || 'vérifiez votre clé API Gemini.');
+    history.pop();
+  }
+
+  messagesEl.scrollTop = messagesEl.scrollHeight;
+  busy = false;
+  sendBtn.disabled = false;
+}
+</script>
+</body>
+</html>
