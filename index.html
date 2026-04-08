@@ -4,57 +4,403 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Assistant Correction Mic — SNCF</title>
-<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
-  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-  :root {
-    --bg: #f5f4f0; --surface: #ffffff; --surface2: #f0ede8; --border: #dedad4;
-    --text: #1a1916; --text2: #6b6860; --accent: #c41e3a; --accent-light: #fdf0f2;
-    --green: #1a7a4a; --green-light: #edf7f1; --radius: 12px;
-    --mono: 'DM Mono', monospace; --sans: 'DM Sans', sans-serif;
-  }
-  body { font-family: var(--sans); background: var(--bg); min-height: 100vh; display: flex; flex-direction: column; align-items: center; padding: 24px 16px; color: var(--text); }
-  header { width: 100%; max-width: 720px; display: flex; align-items: center; gap: 14px; margin-bottom: 20px; }
-  .logo { width: 42px; height: 42px; background: var(--accent); border-radius: 10px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
-  .logo svg { width: 22px; height: 22px; fill: white; }
-  .header-text h1 { font-size: 17px; font-weight: 500; letter-spacing: -0.3px; }
-  .header-text p { font-size: 12px; color: var(--text2); font-family: var(--mono); margin-top: 2px; }
-  #setup { width: 100%; max-width: 720px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px 20px; margin-bottom: 16px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
-  #setup label { font-size: 12px; font-family: var(--mono); color: var(--text2); white-space: nowrap; }
-  #api-key-input { flex: 1; min-width: 180px; border: 1px solid var(--border); border-radius: 8px; padding: 8px 12px; font-size: 13px; font-family: var(--mono); background: var(--bg); color: var(--text); outline: none; transition: border-color 0.15s; }
-  #api-key-input:focus { border-color: var(--accent); }
-  #save-key-btn { padding: 8px 16px; background: var(--accent); color: white; border: none; border-radius: 8px; font-size: 13px; font-family: var(--sans); font-weight: 500; cursor: pointer; white-space: nowrap; transition: opacity 0.15s; }
-  #save-key-btn:hover { opacity: 0.85; }
-  .key-status { font-size: 12px; font-family: var(--mono); padding: 4px 10px; border-radius: 6px; white-space: nowrap; }
-  .key-status.ok { background: var(--green-light); color: var(--green); }
-  .key-status.missing { background: var(--accent-light); color: var(--accent); }
-  .setup-help { width: 100%; font-size: 12px; font-family: var(--mono); color: var(--text2); margin-top: 4px; }
-  .setup-help a { color: var(--accent); }
-  #chat-window { width: 100%; max-width: 720px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 2px 12px rgba(0,0,0,0.05); }
-  #messages { flex: 1; min-height: 400px; max-height: 520px; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 16px; scroll-behavior: smooth; }
-  .msg-user { align-self: flex-end; background: var(--surface2); border: 1px solid var(--border); border-radius: 14px 14px 3px 14px; padding: 10px 14px; max-width: 82%; font-size: 14px; line-height: 1.6; white-space: pre-wrap; word-break: break-word; }
-  .msg-bot-wrap { align-self: flex-start; max-width: 92%; display: flex; flex-direction: column; gap: 8px; }
-  .msg-bot { background: var(--bg); border: 1px solid var(--border); border-radius: 3px 14px 14px 14px; padding: 14px 16px; font-size: 14px; line-height: 1.7; white-space: pre-wrap; word-break: break-word; }
-  .msg-bot.loading { color: var(--text2); font-family: var(--mono); font-size: 13px; }
-  .msg-bot.error { background: var(--accent-light); border-color: #f5c0c8; color: var(--accent); font-size: 13px; }
-  .copy-bar { display: flex; gap: 8px; flex-wrap: wrap; }
-  .copy-btn { display: inline-flex; align-items: center; gap: 6px; padding: 5px 12px; font-size: 12px; font-family: var(--mono); border: 1px solid var(--border); border-radius: 6px; background: var(--surface); color: var(--text2); cursor: pointer; transition: all 0.15s; user-select: none; }
-  .copy-btn:hover { background: var(--surface2); color: var(--text); border-color: #c0bbb5; }
-  .copy-btn.copied { background: var(--green-light); color: var(--green); border-color: #a8dfc0; }
-  .copy-btn svg { width: 13px; height: 13px; flex-shrink: 0; }
-  #input-area { border-top: 1px solid var(--border); padding: 14px 16px; display: flex; gap: 10px; align-items: flex-end; background: var(--surface); }
-  #user-input { flex: 1; resize: none; border: 1px solid var(--border); border-radius: 10px; padding: 10px 14px; font-size: 14px; font-family: var(--sans); line-height: 1.5; min-height: 44px; max-height: 140px; background: var(--bg); color: var(--text); outline: none; transition: border-color 0.15s; }
-  #user-input:focus { border-color: #b0aba5; }
-  #user-input::placeholder { color: var(--text2); }
-  #send-btn { width: 44px; height: 44px; border-radius: 50%; border: none; background: var(--accent); color: white; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; transition: opacity 0.15s, transform 0.1s; }
-  #send-btn:hover { opacity: 0.88; }
-  #send-btn:active { transform: scale(0.95); }
-  #send-btn:disabled { opacity: 0.3; cursor: default; transform: none; }
-  #send-btn svg { width: 18px; height: 18px; fill: white; }
-  .hints { width: 100%; max-width: 720px; display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
-  .hint-pill { font-size: 12px; font-family: var(--mono); padding: 5px 12px; border: 1px solid var(--border); border-radius: 20px; background: var(--surface); color: var(--text2); cursor: pointer; transition: all 0.15s; }
-  .hint-pill:hover { background: var(--surface2); color: var(--text); border-color: #c0bbb5; }
-  footer { margin-top: 20px; font-size: 11px; font-family: var(--mono); color: var(--text2); text-align: center; line-height: 1.8; }
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg: #0a0a0a;
+  --surface: #111111;
+  --surface2: #1a1a1a;
+  --surface3: #222222;
+  --border: #2a2a2a;
+  --border2: #333333;
+  --text: #f0f0f0;
+  --text2: #888888;
+  --text3: #555555;
+  --pink: #ff2d78;
+  --pink-dim: #cc2260;
+  --pink-glow: rgba(255, 45, 120, 0.15);
+  --pink-bg: rgba(255, 45, 120, 0.08);
+  --green: #00c875;
+  --green-bg: rgba(0, 200, 117, 0.08);
+  --red-bg: rgba(255, 60, 60, 0.08);
+  --red: #ff5555;
+  --mono: 'JetBrains Mono', monospace;
+  --sans: 'Space Grotesk', sans-serif;
+  --radius: 14px;
+}
+
+body {
+  font-family: var(--sans);
+  background: var(--bg);
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 28px 16px 40px;
+  color: var(--text);
+}
+
+/* ── HEADER ── */
+header {
+  width: 100%;
+  max-width: 740px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 24px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid var(--border);
+}
+
+.logo {
+  width: 44px;
+  height: 44px;
+  background: var(--pink-bg);
+  border: 1px solid var(--pink);
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.logo svg { width: 20px; height: 20px; fill: var(--pink); }
+
+.header-text h1 {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--text);
+  letter-spacing: -0.4px;
+}
+
+.header-text p {
+  font-size: 11px;
+  color: var(--text3);
+  font-family: var(--mono);
+  margin-top: 3px;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+
+.header-badge {
+  margin-left: auto;
+  font-size: 10px;
+  font-family: var(--mono);
+  color: var(--pink);
+  background: var(--pink-bg);
+  border: 1px solid var(--pink);
+  padding: 3px 10px;
+  border-radius: 20px;
+  letter-spacing: 0.5px;
+}
+
+/* ── SETUP ── */
+#setup {
+  width: 100%;
+  max-width: 740px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 18px 20px;
+  margin-bottom: 16px;
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+#setup label {
+  font-size: 11px;
+  font-family: var(--mono);
+  color: var(--text2);
+  white-space: nowrap;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+#api-key-input {
+  flex: 1;
+  min-width: 180px;
+  border: 1px solid var(--border2);
+  border-radius: 8px;
+  padding: 9px 14px;
+  font-size: 13px;
+  font-family: var(--mono);
+  background: var(--surface2);
+  color: var(--text);
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+#api-key-input:focus {
+  border-color: var(--pink);
+  box-shadow: 0 0 0 3px var(--pink-glow);
+}
+
+#api-key-input::placeholder { color: var(--text3); }
+
+#save-key-btn {
+  padding: 9px 18px;
+  background: var(--pink);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 13px;
+  font-family: var(--sans);
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.15s, transform 0.1s;
+}
+
+#save-key-btn:hover { background: var(--pink-dim); }
+#save-key-btn:active { transform: scale(0.97); }
+
+.key-status {
+  font-size: 11px;
+  font-family: var(--mono);
+  padding: 4px 10px;
+  border-radius: 6px;
+  white-space: nowrap;
+}
+
+.key-status.ok { background: var(--green-bg); color: var(--green); border: 1px solid rgba(0,200,117,0.3); }
+.key-status.missing { background: var(--pink-bg); color: var(--pink); border: 1px solid rgba(255,45,120,0.3); }
+
+.setup-help {
+  width: 100%;
+  font-size: 11px;
+  font-family: var(--mono);
+  color: var(--text3);
+  margin-top: 2px;
+}
+
+.setup-help a { color: var(--pink); text-decoration: none; }
+.setup-help a:hover { text-decoration: underline; }
+
+/* ── CHAT WINDOW ── */
+#chat-window {
+  width: 100%;
+  max-width: 740px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+#messages {
+  min-height: 420px;
+  max-height: 540px;
+  overflow-y: auto;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  scroll-behavior: smooth;
+}
+
+#messages::-webkit-scrollbar { width: 4px; }
+#messages::-webkit-scrollbar-track { background: transparent; }
+#messages::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
+
+/* user bubble */
+.msg-user {
+  align-self: flex-end;
+  background: var(--surface3);
+  border: 1px solid var(--border2);
+  border-radius: 16px 16px 4px 16px;
+  padding: 12px 16px;
+  max-width: 80%;
+  font-size: 14px;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  word-break: break-word;
+  color: var(--text);
+}
+
+/* bot wrap */
+.msg-bot-wrap {
+  align-self: flex-start;
+  max-width: 94%;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.bot-label {
+  font-size: 10px;
+  font-family: var(--mono);
+  color: var(--pink);
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  margin-bottom: -4px;
+}
+
+/* bot bubble */
+.msg-bot {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-left: 2px solid var(--pink);
+  border-radius: 4px 16px 16px 16px;
+  padding: 16px 18px;
+  font-size: 14px;
+  line-height: 1.75;
+  white-space: pre-wrap;
+  word-break: break-word;
+  color: var(--text);
+}
+
+.msg-bot.loading {
+  color: var(--text3);
+  font-family: var(--mono);
+  font-size: 13px;
+  border-left-color: var(--border2);
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+
+.msg-bot.error {
+  background: var(--red-bg);
+  border-left-color: var(--red);
+  color: var(--red);
+  font-size: 13px;
+  font-family: var(--mono);
+}
+
+/* copy bar */
+.copy-bar {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.copy-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  font-size: 11px;
+  font-family: var(--mono);
+  letter-spacing: 0.3px;
+  border: 1px solid var(--border2);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text2);
+  cursor: pointer;
+  transition: all 0.15s;
+  user-select: none;
+}
+
+.copy-btn:hover {
+  border-color: var(--pink);
+  color: var(--pink);
+  background: var(--pink-bg);
+}
+
+.copy-btn.copied {
+  border-color: rgba(0,200,117,0.4);
+  color: var(--green);
+  background: var(--green-bg);
+}
+
+.copy-btn svg { width: 12px; height: 12px; flex-shrink: 0; }
+
+/* ── INPUT AREA ── */
+#input-area {
+  border-top: 1px solid var(--border);
+  padding: 16px;
+  display: flex;
+  gap: 12px;
+  align-items: flex-end;
+  background: var(--surface);
+}
+
+#user-input {
+  flex: 1;
+  resize: none;
+  border: 1px solid var(--border2);
+  border-radius: 10px;
+  padding: 11px 16px;
+  font-size: 14px;
+  font-family: var(--sans);
+  line-height: 1.5;
+  min-height: 46px;
+  max-height: 150px;
+  background: var(--surface2);
+  color: var(--text);
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+#user-input:focus {
+  border-color: var(--pink);
+  box-shadow: 0 0 0 3px var(--pink-glow);
+}
+
+#user-input::placeholder { color: var(--text3); }
+
+#send-btn {
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  border: none;
+  background: var(--pink);
+  color: white;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: background 0.15s, transform 0.1s;
+}
+
+#send-btn:hover { background: var(--pink-dim); }
+#send-btn:active { transform: scale(0.93); }
+#send-btn:disabled { opacity: 0.25; cursor: default; transform: none; }
+#send-btn svg { width: 18px; height: 18px; fill: white; }
+
+/* ── HINTS ── */
+.hints {
+  width: 100%;
+  max-width: 740px;
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 14px;
+}
+
+.hint-pill {
+  font-size: 11px;
+  font-family: var(--mono);
+  padding: 5px 14px;
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  background: transparent;
+  color: var(--text3);
+  cursor: pointer;
+  transition: all 0.15s;
+  letter-spacing: 0.3px;
+}
+
+.hint-pill:hover {
+  border-color: var(--pink);
+  color: var(--pink);
+  background: var(--pink-bg);
+}
+
+footer {
+  margin-top: 24px;
+  font-size: 11px;
+  font-family: var(--mono);
+  color: var(--text3);
+  text-align: center;
+  line-height: 1.9;
+}
 </style>
 </head>
 <body>
@@ -67,10 +413,11 @@
     <h1>Assistant Correction Mic</h1>
     <p>SNCF · Teams &amp; Mail · correction professionnelle</p>
   </div>
+  <span class="header-badge">GROQ AI</span>
 </header>
 
 <div id="setup">
-  <label>CLÉ GROQ</label>
+  <label>Clé Groq</label>
   <input type="password" id="api-key-input" placeholder="gsk_..." autocomplete="off" />
   <button id="save-key-btn">Enregistrer</button>
   <span id="key-status" class="key-status missing">non configurée</span>
@@ -82,6 +429,7 @@
 <div id="chat-window">
   <div id="messages">
     <div class="msg-bot-wrap">
+      <div class="bot-label">assistant</div>
       <div class="msg-bot">Bonjour ! Collez votre texte et je propose une version Teams et une version mail. Précisez « version Teams » ou « version mail » si vous n'en voulez qu'une.</div>
     </div>
   </div>
@@ -182,7 +530,7 @@ function setKeyOk() {
 
 inputEl.addEventListener('input', () => {
   inputEl.style.height = 'auto';
-  inputEl.style.height = Math.min(inputEl.scrollHeight, 140) + 'px';
+  inputEl.style.height = Math.min(inputEl.scrollHeight, 150) + 'px';
 });
 
 inputEl.addEventListener('keydown', e => {
@@ -221,11 +569,8 @@ function makeCopyBtn(label, text) {
 function addCopyBar(text) {
   const bar = document.createElement('div');
   bar.className = 'copy-bar';
-
-  // Try to detect Teams and Mail blocks
   const teamsMatch = text.match(/✅[^\n]*Teams[^\n]*\n([\s\S]*?)(?=📧|$)/i);
   const mailMatch  = text.match(/📧[^\n]*mail[^\n]*\n([\s\S]*?)$/i);
-
   if (teamsMatch && mailMatch) {
     bar.appendChild(makeCopyBtn('Copier Teams', teamsMatch[1]));
     bar.appendChild(makeCopyBtn('Copier Mail', mailMatch[1]));
@@ -236,7 +581,6 @@ function addCopyBar(text) {
   } else {
     bar.appendChild(makeCopyBtn('Copier le texte', text));
   }
-
   return bar;
 }
 
@@ -256,25 +600,26 @@ async function send() {
 
   const wrap = document.createElement('div');
   wrap.className = 'msg-bot-wrap';
+  const label = document.createElement('div');
+  label.className = 'bot-label';
+  label.textContent = 'assistant';
   const botDiv = document.createElement('div');
   botDiv.className = 'msg-bot loading';
   botDiv.textContent = 'Correction en cours…';
+  wrap.appendChild(label);
   wrap.appendChild(botDiv);
   messagesEl.appendChild(wrap);
   messagesEl.scrollTop = messagesEl.scrollHeight;
 
   try {
-    const res = await fetch(
-      `https://api.groq.com/openai/v1/chat/completions`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
-        body: JSON.stringify({
-          model: 'llama-3.3-70b-versatile',
-          messages: [{ role: 'system', content: SYSTEM }, ...history]
-        })
-      }
-    );
+    const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
+      body: JSON.stringify({
+        model: 'llama-3.3-70b-versatile',
+        messages: [{ role: 'system', content: SYSTEM }, ...history]
+      })
+    });
     const data = await res.json();
     if (data.error) throw new Error(data.error.message);
     const reply = data.choices[0].message.content;
