@@ -176,6 +176,8 @@ function setKeyOk() {
   keyStatus.textContent = 'configurée ✓';
   keyStatus.className = 'key-status ok';
   sendBtn.disabled = false;
+  document.getElementById('setup').style.display = 'none';
+  document.querySelector('footer').style.display = 'none';
 }
 
 inputEl.addEventListener('input', () => {
