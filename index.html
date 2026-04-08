@@ -70,12 +70,12 @@
 </header>
 
 <div id="setup">
-  <label>CLÉ GEMINI</label>
-  <input type="password" id="api-key-input" placeholder="AIza..." autocomplete="off" />
+  <label>CLÉ GROQ</label>
+  <input type="password" id="api-key-input" placeholder="gsk_..." autocomplete="off" />
   <button id="save-key-btn">Enregistrer</button>
   <span id="key-status" class="key-status missing">non configurée</span>
   <div class="setup-help">
-    Clé 100% gratuite sur <a href="https://aistudio.google.com/apikey" target="_blank">aistudio.google.com/apikey</a> — aucune carte bancaire requise.
+    Clé 100% gratuite sur <a href="https://console.groq.com/keys" target="_blank">console.groq.com/keys</a> — aucune carte bancaire requise.
   </div>
 </div>
 
@@ -102,7 +102,7 @@
 
 <footer>
   Clé API stockée uniquement dans votre navigateur — jamais transmise à un tiers.<br>
-  Propulsé par Google Gemini · Gratuit sans carte bancaire
+  Propulsé par Groq · Llama 3.3 · Gratuit sans carte bancaire
 </footer>
 
 <script>
@@ -143,14 +143,14 @@ let history = [];
 let busy = false;
 let apiKey = '';
 
-const saved = localStorage.getItem('sncf_gemini_key');
+const saved = localStorage.getItem('sncf_groq_key');
 if (saved) { apiKey = saved; apiKeyInput.value = saved; setKeyOk(); }
 
 document.getElementById('save-key-btn').addEventListener('click', () => {
   const k = apiKeyInput.value.trim();
   if (!k) { keyStatus.textContent = 'clé vide'; keyStatus.className = 'key-status missing'; return; }
   apiKey = k;
-  localStorage.setItem('sncf_gemini_key', k);
+  localStorage.setItem('sncf_groq_key', k);
   setKeyOk();
 });
 
@@ -213,7 +213,7 @@ async function send() {
   messagesEl.appendChild(userDiv);
   inputEl.value = '';
   inputEl.style.height = 'auto';
-  history.push({ role: 'user', parts: [{ text }] });
+  history.push({ role: 'user', content: text });
 
   const wrap = document.createElement('div');
   wrap.className = 'msg-bot-wrap';
@@ -226,26 +226,26 @@ async function send() {
 
   try {
     const res = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${apiKey}`,
+      `https://api.groq.com/openai/v1/chat/completions`,
       {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
         body: JSON.stringify({
-          system_instruction: { parts: [{ text: SYSTEM }] },
-          contents: history
+          model: 'llama-3.3-70b-versatile',
+          messages: [{ role: 'system', content: SYSTEM }, ...history]
         })
       }
     );
     const data = await res.json();
     if (data.error) throw new Error(data.error.message);
-    const reply = data.candidates[0].content.parts.map(p => p.text || '').join('');
+    const reply = data.choices[0].message.content;
     botDiv.className = 'msg-bot';
     botDiv.textContent = reply;
-    history.push({ role: 'model', parts: [{ text: reply }] });
+    history.push({ role: 'assistant', content: reply });
     wrap.appendChild(addCopyBar(reply));
   } catch(e) {
     botDiv.className = 'msg-bot error';
-    botDiv.textContent = 'Erreur : ' + (e.message || 'vérifiez votre clé API Gemini.');
+    botDiv.textContent = 'Erreur : ' + (e.message || 'vérifiez votre clé API Groq.');
     history.pop();
   }
 
